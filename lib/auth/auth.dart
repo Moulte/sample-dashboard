@@ -6,8 +6,8 @@ import 'package:url_launcher/url_launcher.dart';
 // Config
 final authorizationEndpoint = Uri.parse('https://cloud-cmd.com/oauth/authorize');
 final tokenEndpoint = Uri.parse('https://cloud-cmd.com/oauth/token');
-const clientId = 'ZcZfRtm50Ppm7JcgJ3F2O9A2';
-final scopes = ["DASHBOARD", "DCCS", "STOCKS"];
+const clientId = 'U5hthqvUWSH9Jvn09LpbaOvZ';
+final scopes = ["GESTION"];
 
 Future<int> findFixedPort(int port) async {
   try {

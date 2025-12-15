@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:template_dashboard/state.dart';
+import 'package:micro_entreprise_web/state.dart';
 
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});

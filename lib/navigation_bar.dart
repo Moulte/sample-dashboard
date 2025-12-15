@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:template_dashboard/constantes.dart';
-import 'package:template_dashboard/main.dart';
+import 'package:micro_entreprise_web/constantes.dart';
+import 'package:micro_entreprise_web/main.dart';
 
 class AppNavigationRail extends ConsumerStatefulWidget {
   final GoRouterState currentState;
@@ -52,7 +52,7 @@ class _AppNavigationRailState extends ConsumerState<AppNavigationRail> {
                   fontWeight: isParentSelected ? FontWeight.bold : FontWeight.normal,
                 ),
               ),
-              children: location.subLocations.map((sublocation) {
+              children: location.subLocations.where((location) => !location.disabled).map((sublocation) {
                 final isSelected = currentPagePath == sublocation.path;
                 return _AnimatedRailTile(
                   icon: isSelected ? sublocation.selectedIcon : sublocation.unselectedIcon,
@@ -72,6 +72,7 @@ class _AppNavigationRailState extends ConsumerState<AppNavigationRail> {
           ),
         );
       } else {
+        if(location.disabled) continue;
         final isSelected = currentPagePath == location.path;
         navItems.add(
           _AnimatedRailTile(

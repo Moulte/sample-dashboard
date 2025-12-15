@@ -4,15 +4,23 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:template_dashboard/constantes.dart';
-import 'package:template_dashboard/dialog_notif.dart';
-import 'package:template_dashboard/model.dart';
-import 'package:template_dashboard/navigation_bar.dart';
-import 'package:template_dashboard/state.dart';
+import 'package:micro_entreprise_web/constantes.dart';
+import 'package:micro_entreprise_web/dialog_notif.dart';
+import 'package:micro_entreprise_web/model.dart';
+import 'package:micro_entreprise_web/navigation_bar.dart';
+import 'package:micro_entreprise_web/state.dart';
 
 void main() async {
   final pref = await SharedPreferences.getInstance();
-  runApp(ProviderScope(overrides: [prefsProvider.overrideWith((ref) => pref), secureStorageProvider.overrideWith((ref) => kIsWeb?null: FlutterSecureStorage())], child: const DccsApp()));
+  runApp(
+    ProviderScope(
+      overrides: [
+        prefsProvider.overrideWith((ref) => pref),
+        secureStorageProvider.overrideWith((ref) => kIsWeb ? null : FlutterSecureStorage()),
+      ],
+      child: const DccsApp(),
+    ),
+  );
 }
 
 Location? getLocationByPath(String path) {
@@ -39,7 +47,7 @@ List<RouteBase> _createRoutes() {
                 pageBuilder: (context, state) => CustomTransitionPage<void>(
                   key: state.pageKey,
                   name: subLocation.path,
-                  child: subLocation.page,
+                  child: subLocation.pageBuilder(context, state)!,
                   transitionsBuilder: (context, animation, secondaryAnimation, child) => FadeTransition(opacity: animation, child: child),
                 ),
                 path: subLocation.path,
@@ -53,7 +61,7 @@ List<RouteBase> _createRoutes() {
           pageBuilder: (context, state) => CustomTransitionPage<void>(
             key: state.pageKey,
             name: location.path,
-            child: location.page,
+            child: location.pageBuilder(context, state)!,
             transitionsBuilder: (context, animation, secondaryAnimation, child) => FadeTransition(opacity: animation, child: child),
           ),
           path: location.path,
@@ -158,7 +166,9 @@ class ShellPage extends ConsumerWidget {
           return Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              MediaQuery.of(context).size.width > 480 ? AppNavigationRail(currentState: currentState, routes: routes) : Container(),
+              MediaQuery.of(context).size.width > 480
+                  ? AppNavigationRail(currentState: currentState, routes: routes.where((l) => !l.disabled).toList())
+                  : Container(),
               Expanded(
                 child: Scaffold(
                   appBar: AppBar(
@@ -190,7 +200,12 @@ class ShellPage extends ConsumerWidget {
           );
         },
       ),
-      drawer: MediaQuery.of(context).size.width < 480 ? Drawer(width: 220, child: AppNavigationRail(currentState: currentState, routes: routes)) : null,
+      drawer: MediaQuery.of(context).size.width < 480
+          ? Drawer(
+              width: 220,
+              child: AppNavigationRail(currentState: currentState, routes: routes.where((l) => !l.disabled).toList()),
+            )
+          : null,
     );
   }
 }

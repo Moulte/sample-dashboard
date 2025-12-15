@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:template_dashboard/model.dart';
+import 'package:micro_entreprise_web/model.dart';
 
 Future<bool?> displayDialog(BuildContext context, DialogNotif dialog) async {
   final callback = dialog.callback;
