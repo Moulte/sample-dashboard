@@ -84,3 +84,8 @@ final documentsProvider = FutureProvider<List<Document>>((ref) async {
 final clientsProvider = FutureProvider<List<DBClient>>((ref) async {
   return ref.watch(connexionProvider).fetchClients();
 });
+
+final articleSearchProvider = StateProvider<String>((ref) => '');
+final clientSearchProvider = StateProvider<String>((ref) => '');
+final documentSearchProvider = StateProvider<String>((ref) => '');
+final expandedDocumentsProvider = StateProvider<Set<String>>((ref) => <String>{});

@@ -12,59 +12,86 @@ class ClientListPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final clients = ref.watch(clientsProvider);
+    final clientsAsync = ref.watch(clientsProvider);
+    final search = ref.watch(clientSearchProvider);
 
-    return clients.when(
-      data: (clients) {
-        return Scaffold(
-          appBar: AppBar(title: const Text('Liste des clients')),
-          floatingActionButton: FloatingActionButton(
-            onPressed: () async {
-              final newClient = await Navigator.push(context, MaterialPageRoute(builder: (_) => const AddClientPage()));
+    return Scaffold(
+      body: clientsAsync.when(
+        data: (clients) {
+          final filtered = clients.where((c) {
+            final q = search.toLowerCase();
+            return c.numeroClient.toString().contains(q) ||
+                c.nomLivraison.toLowerCase().contains(q) ||
+                c.villeLivraison.toLowerCase().contains(q);
+          }).toList();
 
-              if (newClient != null && context.mounted) {
-                // Normally you would use a stateful widget or provider to refresh
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Nouveau client ajouté')));
-              }
-            },
-            child: const Icon(Icons.add),
-          ),
-          body: ListView.builder(
-            itemCount: clients.length,
-            itemBuilder: (context, index) {
-              final client = clients[index];
-              return ListTile(
-                title: Text('Client N°${client.numeroClient} : ${client.nomLivraison}'),
-                subtitle: Text(' ${client.rueLivraison}, ${client.codePostalLivraison} ${client.villeLivraison}'),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: Icon(Icons.edit),
-                      onPressed: () {
-                        context.go('/clients/edit', extra: client);
-                      },
-                    ),
-                    IconButton(
-                      icon: Icon(Icons.delete),
-                      onPressed: () async {
-                        try {
-                          await ref.read(connexionProvider).deleteClient(client);
-                          ref.read(notifProvider.notifier).displayNotif('Client supprimé avec succès');
-                        } catch (e) {
-                          ref.read(notifProvider.notifier).displayNotif('Erreur lors de la suppression du client : $e');
-                        }
-                      },
-                    ),
-                  ],
+          return Column(
+            children: [
+              // 🔍 Recherche
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: TextField(
+                  decoration: const InputDecoration(
+                    prefixIcon: Icon(Icons.search),
+                    hintText: 'Rechercher un client (nom, n°, ville)',
+                    border: OutlineInputBorder(),
+                  ),
+                  onChanged: (value) => ref.read(clientSearchProvider.notifier).state = value,
                 ),
-              );
-            },
-          ),
-        );
-      },
-      error: (e, _) => Center(child: Text(e.toString())),
-      loading: () => Center(child: CircularProgressIndicator()),
+              ),
+
+              // 📋 Liste
+              Expanded(
+                child: ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: filtered.length,
+                  itemBuilder: (context, index) {
+                    final client = filtered[index];
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      child: ListTile(
+                        title: Text(
+                          'Client N°${client.numeroClient} – ${client.nomLivraison}',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        subtitle: Text(
+                          '${client.rueLivraison}, '
+                          '${client.codePostalLivraison} ${client.villeLivraison}',
+                        ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.edit),
+                              color: Colors.blue,
+                              onPressed: () => context.go('/clients/edit', extra: client),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete),
+                              color: Colors.red,
+                              onPressed: () async {
+                                try {
+                                  await ref.read(connexionProvider).deleteClient(client);
+                                  ref.read(notifProvider.notifier).displayNotif('Client supprimé');
+                                  ref.invalidate(clientsProvider);
+                                } catch (e) {
+                                  ref.read(notifProvider.notifier).displayNotif('Erreur : $e');
+                                }
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          );
+        },
+        error: (e, _) => Center(child: Text(e.toString())),
+        loading: () => const Center(child: CircularProgressIndicator()),
+      ),
     );
   }
 }
@@ -139,110 +166,115 @@ class _AddClientPageState extends ConsumerState<AddClientPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(widget.editedClient != null ? 'Modifier un client' : 'Ajouter un client')),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Form(
           key: _formKey,
-          child: ListView(
-            children: [
-              TextFormField(
-                readOnly: widget.editedClient != null,
-                controller: numeroClientCtrl,
-                decoration: const InputDecoration(labelText: 'Numéro client'),
-              ),
-              const Text('Informations livraison', style: TextStyle(fontWeight: FontWeight.bold)),
-              TextFormField(
-                controller: nomLivraisonCtrl,
-                decoration: const InputDecoration(labelText: 'Nom livraison'),
-              ),
-              TextFormField(
-                controller: rueLivraisonCtrl,
-                decoration: const InputDecoration(labelText: 'Rue livraison'),
-              ),
-              TextFormField(
-                controller: codePostalLivraisonCtrl,
-                decoration: const InputDecoration(labelText: 'Code postal livraison'),
-              ),
-              TextFormField(
-                controller: villeLivraisonCtrl,
-                decoration: const InputDecoration(labelText: 'Ville livraison'),
-              ),
-              TextFormField(
-                controller: telephoneLivraisonCtrl,
-                decoration: const InputDecoration(labelText: 'Téléphone livraison'),
-              ),
-              TextFormField(
-                controller: contactLivraisonCtrl,
-                decoration: const InputDecoration(labelText: 'Contact livraison'),
-              ),
-
-              const SizedBox(height: 20),
-              const Text('Informations facturation', style: TextStyle(fontWeight: FontWeight.bold)),
-              TextFormField(
-                controller: nomFacturationCtrl,
-                decoration: const InputDecoration(labelText: 'Nom facturation'),
-              ),
-              TextFormField(
-                controller: rueFacturationCtrl,
-                decoration: const InputDecoration(labelText: 'Rue facturation'),
-              ),
-              TextFormField(
-                controller: codePostalFacturationCtrl,
-                decoration: const InputDecoration(labelText: 'Code postal facturation'),
-              ),
-              TextFormField(
-                controller: villeFacturationCtrl,
-                decoration: const InputDecoration(labelText: 'Ville facturation'),
-              ),
-              TextFormField(
-                controller: telephoneFacturationCtrl,
-                decoration: const InputDecoration(labelText: 'Téléphone facturation'),
-              ),
-              TextFormField(
-                controller: contactFacturationCtrl,
-                decoration: const InputDecoration(labelText: 'Contact facturation'),
-              ),
-
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: () async {
-                  if (_formKey.currentState!.validate()) {
-                    final newClient = DBClient(
-                      nomLivraison: nomLivraisonCtrl.text,
-                      nomFacturation: nomFacturationCtrl.text,
-                      numeroClient: numeroClientCtrl.text,
-                      rueLivraison: rueLivraisonCtrl.text,
-                      codePostalLivraison: codePostalLivraisonCtrl.text,
-                      villeLivraison: villeLivraisonCtrl.text,
-                      telephoneLivraison: telephoneLivraisonCtrl.text,
-                      contactLivraison: contactLivraisonCtrl.text,
-                      rueFacturation: rueFacturationCtrl.text,
-                      codePostalFacturation: codePostalFacturationCtrl.text,
-                      villeFacturation: villeFacturationCtrl.text,
-                      telephoneFacturation: telephoneFacturationCtrl.text,
-                      contactFacturation: contactFacturationCtrl.text,
-                    );
-
-                    try {
-                      await ref.read(connexionProvider).postClient(newClient);
-                      ref
-                          .read(notifProvider.notifier)
-                          .displayNotif(widget.editedClient != null ? 'Client modifié avec succès' : 'Client ajouté avec succès');
-                    } catch (e) {
-                      ref
-                          .read(notifProvider.notifier)
-                          .displayNotif(
-                            widget.editedClient != null
-                                ? 'Erreur lors de la modification du client : $e'
-                                : 'Erreur lors de l\'ajout du client : $e',
-                          );
+          child: Card(
+          elevation: 2,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            child: ListView(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              children: [
+                TextFormField(
+                  readOnly: widget.editedClient != null,
+                  controller: numeroClientCtrl,
+                  decoration: const InputDecoration(labelText: 'Numéro client'),
+                ),
+                const Text('Informations livraison', style: TextStyle(fontWeight: FontWeight.bold)),
+                TextFormField(
+                  controller: nomLivraisonCtrl,
+                  decoration: const InputDecoration(labelText: 'Nom livraison'),
+                ),
+                TextFormField(
+                  controller: rueLivraisonCtrl,
+                  decoration: const InputDecoration(labelText: 'Rue livraison'),
+                ),
+                TextFormField(
+                  controller: codePostalLivraisonCtrl,
+                  decoration: const InputDecoration(labelText: 'Code postal livraison'),
+                ),
+                TextFormField(
+                  controller: villeLivraisonCtrl,
+                  decoration: const InputDecoration(labelText: 'Ville livraison'),
+                ),
+                TextFormField(
+                  controller: telephoneLivraisonCtrl,
+                  decoration: const InputDecoration(labelText: 'Téléphone livraison'),
+                ),
+                TextFormField(
+                  controller: contactLivraisonCtrl,
+                  decoration: const InputDecoration(labelText: 'Contact livraison'),
+                ),
+            
+                const SizedBox(height: 20),
+                const Text('Informations facturation', style: TextStyle(fontWeight: FontWeight.bold)),
+                TextFormField(
+                  controller: nomFacturationCtrl,
+                  decoration: const InputDecoration(labelText: 'Nom facturation'),
+                ),
+                TextFormField(
+                  controller: rueFacturationCtrl,
+                  decoration: const InputDecoration(labelText: 'Rue facturation'),
+                ),
+                TextFormField(
+                  controller: codePostalFacturationCtrl,
+                  decoration: const InputDecoration(labelText: 'Code postal facturation'),
+                ),
+                TextFormField(
+                  controller: villeFacturationCtrl,
+                  decoration: const InputDecoration(labelText: 'Ville facturation'),
+                ),
+                TextFormField(
+                  controller: telephoneFacturationCtrl,
+                  decoration: const InputDecoration(labelText: 'Téléphone facturation'),
+                ),
+                TextFormField(
+                  controller: contactFacturationCtrl,
+                  decoration: const InputDecoration(labelText: 'Contact facturation'),
+                ),
+            
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: () async {
+                    if (_formKey.currentState!.validate()) {
+                      final newClient = DBClient(
+                        nomLivraison: nomLivraisonCtrl.text,
+                        nomFacturation: nomFacturationCtrl.text,
+                        numeroClient: numeroClientCtrl.text,
+                        rueLivraison: rueLivraisonCtrl.text,
+                        codePostalLivraison: codePostalLivraisonCtrl.text,
+                        villeLivraison: villeLivraisonCtrl.text,
+                        telephoneLivraison: telephoneLivraisonCtrl.text,
+                        contactLivraison: contactLivraisonCtrl.text,
+                        rueFacturation: rueFacturationCtrl.text,
+                        codePostalFacturation: codePostalFacturationCtrl.text,
+                        villeFacturation: villeFacturationCtrl.text,
+                        telephoneFacturation: telephoneFacturationCtrl.text,
+                        contactFacturation: contactFacturationCtrl.text,
+                      );
+            
+                      try {
+                        await ref.read(connexionProvider).postClient(newClient);
+                        ref
+                            .read(notifProvider.notifier)
+                            .displayNotif(widget.editedClient != null ? 'Client modifié avec succès' : 'Client ajouté avec succès');
+                        ref.invalidate(clientsProvider);
+                      } catch (e) {
+                        ref
+                            .read(notifProvider.notifier)
+                            .displayNotif(
+                              widget.editedClient != null
+                                  ? 'Erreur lors de la modification du client : $e'
+                                  : 'Erreur lors de l\'ajout du client : $e',
+                            );
+                      }
                     }
-                  }
-                },
-                child: Text(widget.editedClient != null ? 'Modifier' : 'Ajouter'),
-              ),
-            ],
+                  },
+                  child: Text(widget.editedClient != null ? 'Modifier' : 'Ajouter'),
+                ),
+              ],
+            ),
           ),
         ),
       ),

@@ -110,6 +110,7 @@ class API {
       if (!documentsMap.containsKey(numeroDocument)) {
         documentsMap[numeroDocument] = Document(
           docType: row['docType'],
+          docDate: row['docDate'],
           numeroDocument: numeroDocument,
           client: DBClient.fromJson(row),
           lignes: [],
@@ -122,6 +123,7 @@ class API {
           DocumentRow(
             numeroDocument: numeroDocument,
             numeroLigne: row['numeroLigne'],
+            commentaireLigne: row['commentaireLigne'],
             qte: (row['quantite'] as num?)?.toDouble(),
             remisePrct: (row['remisePrct'] as num?)?.toDouble(),
             article: Article(
