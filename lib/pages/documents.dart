@@ -206,7 +206,12 @@ class _AddDocumentPageState extends ConsumerState<AddDocumentPage> {
   Widget _buildAddButton() {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
-      child: ElevatedButton.icon(onPressed: addItem, icon: const Icon(Icons.add), label: const Text('Ajouter un item')),
+      child: ElevatedButton.icon(
+        style: ButtonStyle(elevation: WidgetStateProperty.all(4)),
+        onPressed: addItem,
+        icon: const Icon(Icons.add),
+        label: const Text('Ajouter un item'),
+      ),
     );
   }
 
@@ -282,6 +287,13 @@ class _AddDocumentPageState extends ConsumerState<AddDocumentPage> {
     if (clients.isEmpty || articles.isEmpty) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
+    ref.watch(documentsProvider).whenData((documents) {
+      if (widget.editedDocument == null) {
+        // Auto-increment du numéro document
+        final maxNum = documents.map((c) => int.tryParse(c.numeroDocument) ?? 0).fold<int>(0, (prev, curr) => curr > prev ? curr : prev);
+        _numDoc = (maxNum + 1).toString();
+      }
+    });
 
     return Scaffold(
       body: Padding(
@@ -292,8 +304,9 @@ class _AddDocumentPageState extends ConsumerState<AddDocumentPage> {
             elevation: 2,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Column(
+              padding: const EdgeInsets.all(16),
+              child: ListView(
+                shrinkWrap: true,
                 children: [
                   TextFormField(
                     readOnly: widget.editedDocument != null,
@@ -339,10 +352,11 @@ class _AddDocumentPageState extends ConsumerState<AddDocumentPage> {
                       setState(() => _client = clients.firstWhere((c) => c.numeroClient == val));
                     },
                   ),
-              
+
                   const SizedBox(height: 16),
-              
-                  Expanded(
+
+                  SizedBox(
+                    height: 400,
                     child: ListView.builder(
                       padding: const EdgeInsets.all(16),
                       itemCount: lignes.length + 1, // +1 pour le bouton "Ajouter"
@@ -354,9 +368,11 @@ class _AddDocumentPageState extends ConsumerState<AddDocumentPage> {
                       },
                     ),
                   ),
-              
+
                   const SizedBox(height: 20),
-                  ElevatedButton(
+                  ElevatedButton.icon(
+                    icon: Icon(Icons.check_circle_outline, color: Colors.green),
+                    style: ButtonStyle(elevation: WidgetStateProperty.all(4)),
                     onPressed: () async {
                       final doc = Document(
                         docType: _docType!,
@@ -381,7 +397,7 @@ class _AddDocumentPageState extends ConsumerState<AddDocumentPage> {
                             );
                       }
                     },
-                    child: Text(widget.editedDocument != null ? 'Modifier' : 'Ajouter'),
+                    label: Text(widget.editedDocument != null ? 'Modifier' : 'Ajouter'),
                   ),
                 ],
               ),

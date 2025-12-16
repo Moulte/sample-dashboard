@@ -165,115 +165,129 @@ class _AddClientPageState extends ConsumerState<AddClientPage> {
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(clientsProvider).whenData((clients) {
+      if (widget.editedClient == null) {
+        // Auto-increment du numéro client
+        final maxNum = clients.map((c) => int.tryParse(c.numeroClient) ?? 0).fold<int>(0, (prev, curr) => curr > prev ? curr : prev);
+        numeroClientCtrl.text = (maxNum + 1).toString();
+      }
+    });
     return Scaffold(
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Form(
           key: _formKey,
           child: Card(
-          elevation: 2,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              children: [
-                TextFormField(
-                  readOnly: widget.editedClient != null,
-                  controller: numeroClientCtrl,
-                  decoration: const InputDecoration(labelText: 'Numéro client'),
-                ),
-                const Text('Informations livraison', style: TextStyle(fontWeight: FontWeight.bold)),
-                TextFormField(
-                  controller: nomLivraisonCtrl,
-                  decoration: const InputDecoration(labelText: 'Nom livraison'),
-                ),
-                TextFormField(
-                  controller: rueLivraisonCtrl,
-                  decoration: const InputDecoration(labelText: 'Rue livraison'),
-                ),
-                TextFormField(
-                  controller: codePostalLivraisonCtrl,
-                  decoration: const InputDecoration(labelText: 'Code postal livraison'),
-                ),
-                TextFormField(
-                  controller: villeLivraisonCtrl,
-                  decoration: const InputDecoration(labelText: 'Ville livraison'),
-                ),
-                TextFormField(
-                  controller: telephoneLivraisonCtrl,
-                  decoration: const InputDecoration(labelText: 'Téléphone livraison'),
-                ),
-                TextFormField(
-                  controller: contactLivraisonCtrl,
-                  decoration: const InputDecoration(labelText: 'Contact livraison'),
-                ),
-            
-                const SizedBox(height: 20),
-                const Text('Informations facturation', style: TextStyle(fontWeight: FontWeight.bold)),
-                TextFormField(
-                  controller: nomFacturationCtrl,
-                  decoration: const InputDecoration(labelText: 'Nom facturation'),
-                ),
-                TextFormField(
-                  controller: rueFacturationCtrl,
-                  decoration: const InputDecoration(labelText: 'Rue facturation'),
-                ),
-                TextFormField(
-                  controller: codePostalFacturationCtrl,
-                  decoration: const InputDecoration(labelText: 'Code postal facturation'),
-                ),
-                TextFormField(
-                  controller: villeFacturationCtrl,
-                  decoration: const InputDecoration(labelText: 'Ville facturation'),
-                ),
-                TextFormField(
-                  controller: telephoneFacturationCtrl,
-                  decoration: const InputDecoration(labelText: 'Téléphone facturation'),
-                ),
-                TextFormField(
-                  controller: contactFacturationCtrl,
-                  decoration: const InputDecoration(labelText: 'Contact facturation'),
-                ),
-            
-                const SizedBox(height: 20),
-                ElevatedButton(
-                  onPressed: () async {
-                    if (_formKey.currentState!.validate()) {
-                      final newClient = DBClient(
-                        nomLivraison: nomLivraisonCtrl.text,
-                        nomFacturation: nomFacturationCtrl.text,
-                        numeroClient: numeroClientCtrl.text,
-                        rueLivraison: rueLivraisonCtrl.text,
-                        codePostalLivraison: codePostalLivraisonCtrl.text,
-                        villeLivraison: villeLivraisonCtrl.text,
-                        telephoneLivraison: telephoneLivraisonCtrl.text,
-                        contactLivraison: contactLivraisonCtrl.text,
-                        rueFacturation: rueFacturationCtrl.text,
-                        codePostalFacturation: codePostalFacturationCtrl.text,
-                        villeFacturation: villeFacturationCtrl.text,
-                        telephoneFacturation: telephoneFacturationCtrl.text,
-                        contactFacturation: contactFacturationCtrl.text,
-                      );
-            
-                      try {
-                        await ref.read(connexionProvider).postClient(newClient);
-                        ref
-                            .read(notifProvider.notifier)
-                            .displayNotif(widget.editedClient != null ? 'Client modifié avec succès' : 'Client ajouté avec succès');
-                        ref.invalidate(clientsProvider);
-                      } catch (e) {
-                        ref
-                            .read(notifProvider.notifier)
-                            .displayNotif(
-                              widget.editedClient != null
-                                  ? 'Erreur lors de la modification du client : $e'
-                                  : 'Erreur lors de l\'ajout du client : $e',
-                            );
+            elevation: 2,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: ListView(
+                shrinkWrap: true,
+                children: [
+                  TextFormField(
+                    readOnly: widget.editedClient != null,
+                    controller: numeroClientCtrl,
+                    decoration: const InputDecoration(labelText: 'Numéro client'),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text('Informations livraison', style: TextStyle(fontWeight: FontWeight.bold)),
+                  TextFormField(
+                    controller: nomLivraisonCtrl,
+                    decoration: const InputDecoration(labelText: 'Nom livraison'),
+                  ),
+                  TextFormField(
+                    controller: rueLivraisonCtrl,
+                    decoration: const InputDecoration(labelText: 'Rue livraison'),
+                  ),
+                  TextFormField(
+                    controller: codePostalLivraisonCtrl,
+                    decoration: const InputDecoration(labelText: 'Code postal livraison'),
+                  ),
+                  TextFormField(
+                    controller: villeLivraisonCtrl,
+                    decoration: const InputDecoration(labelText: 'Ville livraison'),
+                  ),
+                  TextFormField(
+                    controller: telephoneLivraisonCtrl,
+                    decoration: const InputDecoration(labelText: 'Téléphone livraison'),
+                  ),
+                  TextFormField(
+                    controller: contactLivraisonCtrl,
+                    decoration: const InputDecoration(labelText: 'Contact livraison'),
+                  ),
+
+                  const SizedBox(height: 20),
+                  const Text('Informations facturation', style: TextStyle(fontWeight: FontWeight.bold)),
+                  TextFormField(
+                    controller: nomFacturationCtrl,
+                    decoration: const InputDecoration(labelText: 'Nom facturation'),
+                  ),
+                  TextFormField(
+                    controller: rueFacturationCtrl,
+                    decoration: const InputDecoration(labelText: 'Rue facturation'),
+                  ),
+                  TextFormField(
+                    controller: codePostalFacturationCtrl,
+                    decoration: const InputDecoration(labelText: 'Code postal facturation'),
+                  ),
+                  TextFormField(
+                    controller: villeFacturationCtrl,
+                    decoration: const InputDecoration(labelText: 'Ville facturation'),
+                  ),
+                  TextFormField(
+                    controller: telephoneFacturationCtrl,
+                    decoration: const InputDecoration(labelText: 'Téléphone facturation'),
+                  ),
+                  TextFormField(
+                    controller: contactFacturationCtrl,
+                    decoration: const InputDecoration(labelText: 'Contact facturation'),
+                  ),
+
+                  const SizedBox(height: 20),
+                  ElevatedButton.icon(
+                    icon: Icon(Icons.check_circle_outline, color: Colors.green),
+                    style: ButtonStyle(elevation: WidgetStateProperty.all(4)),
+                    onPressed: () async {
+                      if (_formKey.currentState!.validate()) {
+                        final newClient = DBClient(
+                          nomLivraison: nomLivraisonCtrl.text,
+                          nomFacturation: nomFacturationCtrl.text,
+                          numeroClient: numeroClientCtrl.text,
+                          rueLivraison: rueLivraisonCtrl.text,
+                          codePostalLivraison: codePostalLivraisonCtrl.text,
+                          villeLivraison: villeLivraisonCtrl.text,
+                          telephoneLivraison: telephoneLivraisonCtrl.text,
+                          contactLivraison: contactLivraisonCtrl.text,
+                          rueFacturation: rueFacturationCtrl.text,
+                          codePostalFacturation: codePostalFacturationCtrl.text,
+                          villeFacturation: villeFacturationCtrl.text,
+                          telephoneFacturation: telephoneFacturationCtrl.text,
+                          contactFacturation: contactFacturationCtrl.text,
+                        );
+
+                        try {
+                          await ref.read(connexionProvider).postClient(newClient);
+                          ref
+                              .read(notifProvider.notifier)
+                              .displayNotif(widget.editedClient != null ? 'Client modifié avec succès' : 'Client ajouté avec succès');
+                          ref.invalidate(clientsProvider);
+                        } catch (e) {
+                          ref
+                              .read(notifProvider.notifier)
+                              .displayNotif(
+                                widget.editedClient != null
+                                    ? 'Erreur lors de la modification du client : $e'
+                                    : 'Erreur lors de l\'ajout du client : $e',
+                              );
+                        }
                       }
-                    }
-                  },
-                  child: Text(widget.editedClient != null ? 'Modifier' : 'Ajouter'),
-                ),
-              ],
+                    },
+                    label: Text(widget.editedClient != null ? 'Modifier' : 'Ajouter'),
+                  ),
+                  const SizedBox(height: 8),
+                ],
+              ),
             ),
           ),
         ),

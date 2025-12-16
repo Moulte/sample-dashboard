@@ -75,7 +75,7 @@ final clients = LocationContainer(
   ],
 );
 final documents = LocationContainer(
-  name: "Documents",
+  name: "Docs.",
   path: "/documents",
   selectedIcon: Icon(Icons.file_open, color: Colors.white),
   unselectedIcon: Icon(Icons.file_open_outlined, color: Colors.white.withValues(alpha: 0.6)),
@@ -107,30 +107,30 @@ final documents = LocationContainer(
 final articles = LocationContainer(
   name: "Articles",
   path: "/articles",
-  selectedIcon: Icon(Icons.article, color: Colors.white),
-  unselectedIcon: Icon(Icons.article_outlined, color: Colors.white.withValues(alpha: 0.6)),
+  selectedIcon: Icon(Icons.shopping_cart, color: Colors.white),
+  unselectedIcon: Icon(Icons.shopping_cart_outlined, color: Colors.white.withValues(alpha: 0.6)),
   subLocations: [
     Location(
       pageBuilder: (context, state) => ArticleListPage(),
       name: "Articles",
       path: "/articles/all",
-      selectedIcon: Icon(Icons.article, color: Colors.white),
-      unselectedIcon: Icon(Icons.article_outlined, color: Colors.white.withValues(alpha: 0.6)),
+      selectedIcon: Icon(Icons.shopping_cart, color: Colors.white),
+      unselectedIcon: Icon(Icons.shopping_cart_outlined, color: Colors.white.withValues(alpha: 0.6)),
     ),
     Location(
       pageBuilder: (context, state) => AddArticlePage(),
       name: "Nouvel article",
       path: "/articles/new",
-      selectedIcon: Icon(Icons.article, color: Colors.white),
-      unselectedIcon: Icon(Icons.article_outlined, color: Colors.white.withValues(alpha: 0.6)),
+      selectedIcon: Icon(Icons.add_shopping_cart, color: Colors.white),
+      unselectedIcon: Icon(Icons.add_shopping_cart_outlined, color: Colors.white.withValues(alpha: 0.6)),
     ),
     Location(
       disabled: true,
       pageBuilder: (context, state) => AddArticlePage(editedArticle: state.extra as Article),
       name: "Edit Article",
       path: "/articles/edit",
-      selectedIcon: Icon(Icons.person_add, color: Colors.white),
-      unselectedIcon: Icon(Icons.person_add_outlined, color: Colors.white.withValues(alpha: 0.6)),
+      selectedIcon: Icon(Icons.shopping_cart, color: Colors.white),
+      unselectedIcon: Icon(Icons.shopping_cart_outlined, color: Colors.white.withValues(alpha: 0.6)),
     ),
   ],
 );

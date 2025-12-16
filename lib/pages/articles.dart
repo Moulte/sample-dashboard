@@ -132,51 +132,56 @@ class _AddArticlePageState extends ConsumerState<AddArticlePage> {
         child: Card(
           elevation: 2,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          child: ListView(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            children: [
-              TextField(
-                readOnly: widget.editedArticle != null,
-                controller: codeCtrl,
-                decoration: const InputDecoration(labelText: 'Code article'),
-              ),
-              TextField(
-                controller: libCtrl,
-                decoration: const InputDecoration(labelText: 'Libellé article'),
-              ),
-              TextField(
-                controller: puCtrl,
-                decoration: const InputDecoration(labelText: 'Prix unitaire HT'),
-              ),
-              TextField(
-                controller: tvaPrct,
-                decoration: const InputDecoration(labelText: 'TVA en %'),
-              ),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: () async {
-                  final pu = double.tryParse(puCtrl.text) ?? 0;
-                  final tva = double.tryParse(tvaPrct.text) ?? 0;
-                  final newArticle = Article(codeArticle: codeCtrl.text, libArticle: libCtrl.text, prixUnitaireHT: pu, tvaPrct: tva);
-                  try {
-                    await ref.read(connexionProvider).postArticle(newArticle);
-                    ref
-                        .read(notifProvider.notifier)
-                        .displayNotif(widget.editedArticle != null ? 'Article modifié avec succès' : 'Article ajouté avec succès');
-                    ref.invalidate(articlesProvider);
-                  } catch (e) {
-                    ref
-                        .read(notifProvider.notifier)
-                        .displayNotif(
-                          widget.editedArticle != null
-                              ? 'Erreur lors de la modification de l\'article : $e'
-                              : 'Erreur lors de l\'ajout de l\'article : $e',
-                        );
-                  }
-                },
-                child: Text(widget.editedArticle != null ? 'Modifier' : 'Ajouter'),
-              ),
-            ],
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: ListView(
+              shrinkWrap: true,
+              children: [
+                TextField(
+                  readOnly: widget.editedArticle != null,
+                  controller: codeCtrl,
+                  decoration: const InputDecoration(labelText: 'Code article'),
+                ),
+                TextField(
+                  controller: libCtrl,
+                  decoration: const InputDecoration(labelText: 'Libellé article'),
+                ),
+                TextField(
+                  controller: puCtrl,
+                  decoration: const InputDecoration(labelText: 'Prix unitaire HT'),
+                ),
+                TextField(
+                  controller: tvaPrct,
+                  decoration: const InputDecoration(labelText: 'TVA en %'),
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton.icon(
+                  icon: Icon(Icons.check_circle_outline, color: Colors.green),
+                  style: ButtonStyle(elevation: WidgetStateProperty.all(4)),
+                  onPressed: () async {
+                    final pu = double.tryParse(puCtrl.text) ?? 0;
+                    final tva = double.tryParse(tvaPrct.text) ?? 0;
+                    final newArticle = Article(codeArticle: codeCtrl.text, libArticle: libCtrl.text, prixUnitaireHT: pu, tvaPrct: tva);
+                    try {
+                      await ref.read(connexionProvider).postArticle(newArticle);
+                      ref
+                          .read(notifProvider.notifier)
+                          .displayNotif(widget.editedArticle != null ? 'Article modifié avec succès' : 'Article ajouté avec succès');
+                      ref.invalidate(articlesProvider);
+                    } catch (e) {
+                      ref
+                          .read(notifProvider.notifier)
+                          .displayNotif(
+                            widget.editedArticle != null
+                                ? 'Erreur lors de la modification de l\'article : $e'
+                                : 'Erreur lors de l\'ajout de l\'article : $e',
+                          );
+                    }
+                  },
+                  label: Text(widget.editedArticle != null ? 'Modifier' : 'Ajouter'),
+                ),
+              ],
+            ),
           ),
         ),
       ),
