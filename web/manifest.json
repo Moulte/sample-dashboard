@@ -1,6 +1,6 @@
 {
-    "name": "dashboard",
-    "short_name": "dashboard",
+    "name": "micro_entreprise",
+    "short_name": "gestion",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

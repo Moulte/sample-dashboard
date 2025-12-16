@@ -18,7 +18,7 @@ void main() async {
         prefsProvider.overrideWith((ref) => pref),
         secureStorageProvider.overrideWith((ref) => kIsWeb ? null : FlutterSecureStorage()),
       ],
-      child: const DccsApp(),
+      child: const MicroEntreprise(),
     ),
   );
 }
@@ -73,7 +73,7 @@ List<RouteBase> _createRoutes() {
 }
 
 final routerProvider = Provider((ref) {
-  String lastLocation = ref.read(prefsProvider).getString("lastLocation") ?? "/";
+  String lastLocation = ref.read(prefsProvider).getString("lastLocation") ?? "/documents/all";
   final GoRouter router = GoRouter(
     initialLocation: lastLocation,
     routes: [
@@ -104,15 +104,15 @@ final routerProvider = Provider((ref) {
   return router;
 });
 
-class DccsApp extends ConsumerWidget {
-  const DccsApp({super.key});
+class MicroEntreprise extends ConsumerWidget {
+  const MicroEntreprise({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
     return MaterialApp.router(
       debugShowCheckedModeBanner: false,
-      title: "Dccs App",
+      title: "micro_entreprise",
       theme: ThemeData(
         useMaterial3: true,
         textTheme: const TextTheme(
