@@ -1,3 +1,4 @@
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
@@ -78,7 +79,8 @@ final articlesProvider = FutureProvider<List<Article>>((ref) async {
 });
 
 final documentsProvider = FutureProvider<List<Document>>((ref) async {
-  return ref.watch(connexionProvider).fetchDocuments();
+  final docs =  await ref.watch(connexionProvider).fetchDocuments();
+  return docs.sortedBy((b) => b.docDate).reversed.toList();
 });
 
 final clientsProvider = FutureProvider<List<DBClient>>((ref) async {
