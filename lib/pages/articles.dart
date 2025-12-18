@@ -81,7 +81,9 @@ class ArticleListPage extends ConsumerWidget {
                                       } catch (e) {
                                         ref.read(notifProvider.notifier).displayNotif('Erreur : $e');
                                       } finally {
-                                        notifier.state = notifier.state..remove(a.codeArticle);
+                                        final newSet = Set<String>.from(notifier.state);
+                                        newSet.remove(a.codeArticle);
+                                        notifier.state = newSet;
                                       }
                                     },
                             ),

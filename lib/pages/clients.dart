@@ -85,7 +85,9 @@ class ClientListPage extends ConsumerWidget {
                                       } catch (e) {
                                         ref.read(notifProvider.notifier).displayNotif('Erreur : $e');
                                       } finally {
-                                        notifier.state = notifier.state..remove(client.numeroClient);
+                                        final newSet = Set<String>.from(notifier.state);
+                                        newSet.remove(client.numeroClient);
+                                        notifier.state = newSet;
                                       }
                                     },
                             ),

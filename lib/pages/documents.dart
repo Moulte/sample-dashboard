@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -6,6 +8,7 @@ import 'package:micro_entreprise_web/data_model/db_client.dart';
 import 'package:micro_entreprise_web/data_model/document.dart';
 import 'package:micro_entreprise_web/state.dart';
 import 'package:intl/intl.dart';
+import 'package:micro_entreprise_web/utils/file_saver.dart';
 
 class _DocumentRowsView extends StatelessWidget {
   final List<DocumentRow> rows;
@@ -51,6 +54,7 @@ class DocumentListPage extends ConsumerWidget {
     final documentsAsync = ref.watch(documentsProvider);
     final search = ref.watch(documentSearchProvider);
     final expandedDocs = ref.watch(expandedDocumentsProvider);
+    ref.read(configProvider);
 
     return Scaffold(
       body: documentsAsync.when(
@@ -125,12 +129,27 @@ class DocumentListPage extends ConsumerWidget {
                                   onPressed: deleting
                                       ? null
                                       : () async {
-                                          final config = ref.read(configProvider).whenOrNull(data: (d) => d);
-                                          if (config == null || !config.checkConfigurationComplete()) {
-                                            ref.read(notifProvider.notifier).displayNotif('Configuration incomplète');
-                                            return;
+                                          final notifier = ref.read(deletingDocumentProvider.notifier);
+                                          notifier.state = {...notifier.state, d.numeroDocument};
+                                          try {
+                                            final config = ref.read(configProvider).whenOrNull(data: (d) => d);
+                                            if (config == null || !config.checkConfigurationComplete()) {
+                                              ref.read(notifProvider.notifier).displayNotif('Configuration incomplète');
+                                              return;
+                                            }
+                                            final Uint8List bytes = await ref.read(connexionProvider).downloadDocument(config, d);
+                                            await saveFile(
+                                              bytes: bytes,
+                                              filename: '${d.docType}_${d.numeroDocument}.pdf',
+                                              mimeType: 'application/pdf',
+                                            );
+                                          } catch (e) {
+                                            ref.read(notifProvider.notifier).displayNotif('Erreur : $e');
+                                          } finally {
+                                            final newSet = Set<String>.from(notifier.state);
+                                            newSet.remove(d.numeroDocument);
+                                            notifier.state = newSet;
                                           }
-                                          ref.read(connexionProvider).downloadDocument(config, d);
                                         },
                                 ),
                                 IconButton(
@@ -156,7 +175,9 @@ class DocumentListPage extends ConsumerWidget {
                                           } catch (e) {
                                             ref.read(notifProvider.notifier).displayNotif('Erreur : $e');
                                           } finally {
-                                            notifier.state = notifier.state..remove(d.numeroDocument);
+                                            final newSet = Set<String>.from(notifier.state);
+                                            newSet.remove(d.numeroDocument);
+                                            notifier.state = newSet;
                                           }
                                         },
                                 ),
