@@ -5,6 +5,7 @@ import 'package:micro_entreprise_web/data_model/db_client.dart';
 import 'package:micro_entreprise_web/data_model/document.dart';
 import 'package:micro_entreprise_web/pages/articles.dart';
 import 'package:micro_entreprise_web/pages/clients.dart';
+import 'package:micro_entreprise_web/pages/config.dart';
 import 'package:micro_entreprise_web/pages/documents.dart';
 
 class LocationContainer extends Location {
@@ -134,8 +135,15 @@ final articles = LocationContainer(
     ),
   ],
 );
+final config = Location(
+  name: "Config",
+  path: "/config",
+  pageBuilder: (context, state) => EditConfigurationPage(),
+  selectedIcon: Icon(Icons.settings, color: Colors.white),
+  unselectedIcon: Icon(Icons.settings_outlined, color: Colors.white.withValues(alpha: 0.6)),
+);
 
-final routes = <Location>[clients, articles, documents];
+final routes = <Location>[clients, articles, documents, config];
 
 const headerBackGround = Color.fromARGB(255, 46, 63, 82);
 const appBarColor = Color.fromARGB(255, 238, 78, 61);

@@ -20,9 +20,7 @@ class ClientListPage extends ConsumerWidget {
         data: (clients) {
           final filtered = clients.where((c) {
             final q = search.toLowerCase();
-            return c.numeroClient.toString().contains(q) ||
-                c.nomLivraison.toLowerCase().contains(q) ||
-                c.villeLivraison.toLowerCase().contains(q);
+            return c.numeroClient.contains(q) || c.nomLivraison.toLowerCase().contains(q) || c.villeLivraison.toLowerCase().contains(q);
           }).toList();
 
           return Column(
@@ -47,6 +45,8 @@ class ClientListPage extends ConsumerWidget {
                   itemCount: filtered.length,
                   itemBuilder: (context, index) {
                     final client = filtered[index];
+                    final deleting = ref.watch(deletingClientProvider).contains(client.numeroClient);
+
                     return Card(
                       margin: const EdgeInsets.only(bottom: 8),
                       child: ListTile(
@@ -67,17 +67,27 @@ class ClientListPage extends ConsumerWidget {
                               onPressed: () => context.go('/clients/edit', extra: client),
                             ),
                             IconButton(
-                              icon: const Icon(Icons.delete),
+                              icon: deleting
+                                  ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                                  : const Icon(Icons.delete),
                               color: Colors.red,
-                              onPressed: () async {
-                                try {
-                                  await ref.read(connexionProvider).deleteClient(client);
-                                  ref.read(notifProvider.notifier).displayNotif('Client supprimé');
-                                  ref.invalidate(clientsProvider);
-                                } catch (e) {
-                                  ref.read(notifProvider.notifier).displayNotif('Erreur : $e');
-                                }
-                              },
+                              onPressed: deleting
+                                  ? null
+                                  : () async {
+                                      final notifier = ref.read(deletingClientProvider.notifier);
+
+                                      notifier.state = {...notifier.state, client.numeroClient};
+
+                                      try {
+                                        await ref.read(connexionProvider).deleteClient(client);
+                                        ref.read(notifProvider.notifier).displayNotif('Client supprimé');
+                                        ref.invalidate(clientsProvider);
+                                      } catch (e) {
+                                        ref.read(notifProvider.notifier).displayNotif('Erreur : $e');
+                                      } finally {
+                                        notifier.state = notifier.state..remove(client.numeroClient);
+                                      }
+                                    },
                             ),
                           ],
                         ),
@@ -123,6 +133,7 @@ class _AddClientPageState extends ConsumerState<AddClientPage> {
   final contactFacturationCtrl = TextEditingController();
   final nomFacturationCtrl = TextEditingController();
   final nomLivraisonCtrl = TextEditingController();
+  bool _isSubmitting = false;
 
   @override
   void initState() {
@@ -166,22 +177,22 @@ class _AddClientPageState extends ConsumerState<AddClientPage> {
   @override
   Widget build(BuildContext context) {
     ref.watch(clientsProvider).whenData((clients) {
-      if (widget.editedClient == null) {
-        // Auto-increment du numéro client
-        final maxNum = clients.map((c) => int.tryParse(c.numeroClient) ?? 0).fold<int>(0, (prev, curr) => curr > prev ? curr : prev);
+      if (widget.editedClient == null && numeroClientCtrl.text.isEmpty) {
+        final maxNum = clients.map((c) => int.tryParse(c.numeroClient) ?? 0).fold<int>(0, (a, b) => b > a ? b : a);
         numeroClientCtrl.text = (maxNum + 1).toString();
       }
     });
+
     return Scaffold(
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(16),
         child: Form(
           key: _formKey,
           child: Card(
             elevation: 2,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             child: Padding(
-              padding: const EdgeInsets.all(16.0),
+              padding: const EdgeInsets.all(16),
               child: ListView(
                 shrinkWrap: true,
                 children: [
@@ -190,6 +201,7 @@ class _AddClientPageState extends ConsumerState<AddClientPage> {
                     controller: numeroClientCtrl,
                     decoration: const InputDecoration(labelText: 'Numéro client'),
                   ),
+
                   const SizedBox(height: 8),
                   const Text('Informations livraison', style: TextStyle(fontWeight: FontWeight.bold)),
                   TextFormField(
@@ -243,49 +255,56 @@ class _AddClientPageState extends ConsumerState<AddClientPage> {
                     controller: contactFacturationCtrl,
                     decoration: const InputDecoration(labelText: 'Contact facturation'),
                   ),
+                  ElevatedButton(
+                    onPressed: _isSubmitting
+                        ? null
+                        : () async {
+                            if (!_formKey.currentState!.validate()) {
+                              return;
+                            }
 
-                  const SizedBox(height: 20),
-                  ElevatedButton.icon(
-                    icon: Icon(Icons.check_circle_outline, color: Colors.green),
-                    style: ButtonStyle(elevation: WidgetStateProperty.all(4)),
-                    onPressed: () async {
-                      if (_formKey.currentState!.validate()) {
-                        final newClient = DBClient(
-                          nomLivraison: nomLivraisonCtrl.text,
-                          nomFacturation: nomFacturationCtrl.text,
-                          numeroClient: numeroClientCtrl.text,
-                          rueLivraison: rueLivraisonCtrl.text,
-                          codePostalLivraison: codePostalLivraisonCtrl.text,
-                          villeLivraison: villeLivraisonCtrl.text,
-                          telephoneLivraison: telephoneLivraisonCtrl.text,
-                          contactLivraison: contactLivraisonCtrl.text,
-                          rueFacturation: rueFacturationCtrl.text,
-                          codePostalFacturation: codePostalFacturationCtrl.text,
-                          villeFacturation: villeFacturationCtrl.text,
-                          telephoneFacturation: telephoneFacturationCtrl.text,
-                          contactFacturation: contactFacturationCtrl.text,
-                        );
+                            setState(() => _isSubmitting = true);
 
-                        try {
-                          await ref.read(connexionProvider).postClient(newClient);
-                          ref
-                              .read(notifProvider.notifier)
-                              .displayNotif(widget.editedClient != null ? 'Client modifié avec succès' : 'Client ajouté avec succès');
-                          ref.invalidate(clientsProvider);
-                        } catch (e) {
-                          ref
-                              .read(notifProvider.notifier)
-                              .displayNotif(
-                                widget.editedClient != null
-                                    ? 'Erreur lors de la modification du client : $e'
-                                    : 'Erreur lors de l\'ajout du client : $e',
-                              );
-                        }
-                      }
-                    },
-                    label: Text(widget.editedClient != null ? 'Modifier' : 'Ajouter'),
+                            final newClient = DBClient(
+                              numeroClient: numeroClientCtrl.text,
+                              nomLivraison: nomLivraisonCtrl.text,
+                              rueLivraison: rueLivraisonCtrl.text,
+                              codePostalLivraison: codePostalLivraisonCtrl.text,
+                              villeLivraison: villeLivraisonCtrl.text,
+                              telephoneLivraison: telephoneLivraisonCtrl.text,
+                              contactLivraison: contactLivraisonCtrl.text,
+                              nomFacturation: nomFacturationCtrl.text,
+                              rueFacturation: rueFacturationCtrl.text,
+                              codePostalFacturation: codePostalFacturationCtrl.text,
+                              villeFacturation: villeFacturationCtrl.text,
+                              telephoneFacturation: telephoneFacturationCtrl.text,
+                              contactFacturation: contactFacturationCtrl.text,
+                            );
+
+                            try {
+                              await ref.read(connexionProvider).postClient(newClient);
+                              ref
+                                  .read(notifProvider.notifier)
+                                  .displayNotif(widget.editedClient != null ? 'Client modifié avec succès' : 'Client ajouté avec succès');
+                              ref.invalidate(clientsProvider);
+                            } catch (e) {
+                              ref
+                                  .read(notifProvider.notifier)
+                                  .displayNotif(
+                                    widget.editedClient != null
+                                        ? 'Erreur lors de la modification du client : $e'
+                                        : 'Erreur lors de l\'ajout du client : $e',
+                                  );
+                            } finally {
+                              if (mounted) {
+                                setState(() => _isSubmitting = false);
+                              }
+                            }
+                          },
+                    child: _isSubmitting
+                        ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                        : Text(widget.editedClient != null ? 'Modifier' : 'Ajouter'),
                   ),
-                  const SizedBox(height: 8),
                 ],
               ),
             ),

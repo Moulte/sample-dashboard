@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:micro_entreprise_web/data_model/article.dart';
+import 'package:micro_entreprise_web/data_model/config.dart';
 import 'package:micro_entreprise_web/data_model/db_client.dart';
 import 'package:micro_entreprise_web/data_model/document.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -79,7 +80,7 @@ final articlesProvider = FutureProvider<List<Article>>((ref) async {
 });
 
 final documentsProvider = FutureProvider<List<Document>>((ref) async {
-  final docs =  await ref.watch(connexionProvider).fetchDocuments();
+  final docs = await ref.watch(connexionProvider).fetchDocuments();
   return docs.sortedBy((b) => b.docDate).reversed.toList();
 });
 
@@ -87,7 +88,14 @@ final clientsProvider = FutureProvider<List<DBClient>>((ref) async {
   return ref.watch(connexionProvider).fetchClients();
 });
 
+final configProvider = FutureProvider<AppConfiguration>((ref) async {
+  return ref.watch(connexionProvider).fetchConfig();
+});
+
 final articleSearchProvider = StateProvider<String>((ref) => '');
 final clientSearchProvider = StateProvider<String>((ref) => '');
 final documentSearchProvider = StateProvider<String>((ref) => '');
 final expandedDocumentsProvider = StateProvider<Set<String>>((ref) => <String>{});
+final deletingArticleProvider = StateProvider<Set<String>>((ref) => {});
+final deletingClientProvider = StateProvider<Set<String>>((ref) => {});
+final deletingDocumentProvider = StateProvider<Set<String>>((ref) => {});

@@ -46,6 +46,8 @@ class ArticleListPage extends ConsumerWidget {
                   separatorBuilder: (_, _) => const SizedBox(height: 8),
                   itemBuilder: (context, index) {
                     final a = filtered[index];
+                    final deleting = ref.watch(deletingArticleProvider).contains(a.codeArticle);
+
                     return Card(
                       elevation: 2,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -61,17 +63,27 @@ class ArticleListPage extends ConsumerWidget {
                               onPressed: () => context.go('/articles/edit', extra: a),
                             ),
                             IconButton(
-                              icon: const Icon(Icons.delete),
+                              icon: deleting
+                                  ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                                  : const Icon(Icons.delete),
                               color: Colors.red,
-                              onPressed: () async {
-                                try {
-                                  await ref.read(connexionProvider).deleteArticle(a);
-                                  ref.read(notifProvider.notifier).displayNotif('Article supprimé');
-                                  ref.invalidate(articlesProvider);
-                                } catch (e) {
-                                  ref.read(notifProvider.notifier).displayNotif('Erreur : $e');
-                                }
-                              },
+                              onPressed: deleting
+                                  ? null
+                                  : () async {
+                                      final notifier = ref.read(deletingArticleProvider.notifier);
+
+                                      notifier.state = {...notifier.state, a.codeArticle};
+
+                                      try {
+                                        await ref.read(connexionProvider).deleteArticle(a);
+                                        ref.read(notifProvider.notifier).displayNotif('Article supprimé');
+                                        ref.invalidate(articlesProvider);
+                                      } catch (e) {
+                                        ref.read(notifProvider.notifier).displayNotif('Erreur : $e');
+                                      } finally {
+                                        notifier.state = notifier.state..remove(a.codeArticle);
+                                      }
+                                    },
                             ),
                           ],
                         ),
@@ -103,6 +115,7 @@ class _AddArticlePageState extends ConsumerState<AddArticlePage> {
   final libCtrl = TextEditingController();
   final puCtrl = TextEditingController();
   final tvaPrct = TextEditingController();
+  bool _isSubmitting = false;
 
   @override
   void initState() {
@@ -155,30 +168,39 @@ class _AddArticlePageState extends ConsumerState<AddArticlePage> {
                   decoration: const InputDecoration(labelText: 'TVA en %'),
                 ),
                 const SizedBox(height: 20),
-                ElevatedButton.icon(
-                  icon: Icon(Icons.check_circle_outline, color: Colors.green),
-                  style: ButtonStyle(elevation: WidgetStateProperty.all(4)),
-                  onPressed: () async {
-                    final pu = double.tryParse(puCtrl.text) ?? 0;
-                    final tva = double.tryParse(tvaPrct.text) ?? 0;
-                    final newArticle = Article(codeArticle: codeCtrl.text, libArticle: libCtrl.text, prixUnitaireHT: pu, tvaPrct: tva);
-                    try {
-                      await ref.read(connexionProvider).postArticle(newArticle);
-                      ref
-                          .read(notifProvider.notifier)
-                          .displayNotif(widget.editedArticle != null ? 'Article modifié avec succès' : 'Article ajouté avec succès');
-                      ref.invalidate(articlesProvider);
-                    } catch (e) {
-                      ref
-                          .read(notifProvider.notifier)
-                          .displayNotif(
-                            widget.editedArticle != null
-                                ? 'Erreur lors de la modification de l\'article : $e'
-                                : 'Erreur lors de l\'ajout de l\'article : $e',
+                ElevatedButton(
+                  onPressed: _isSubmitting
+                      ? null
+                      : () async {
+                          setState(() => _isSubmitting = true);
+
+                          final pu = double.tryParse(puCtrl.text) ?? 0;
+                          final tva = double.tryParse(tvaPrct.text) ?? 0;
+
+                          final newArticle = Article(
+                            codeArticle: codeCtrl.text,
+                            libArticle: libCtrl.text,
+                            prixUnitaireHT: pu,
+                            tvaPrct: tva,
                           );
-                    }
-                  },
-                  label: Text(widget.editedArticle != null ? 'Modifier' : 'Ajouter'),
+
+                          try {
+                            await ref.read(connexionProvider).postArticle(newArticle);
+                            ref
+                                .read(notifProvider.notifier)
+                                .displayNotif(widget.editedArticle != null ? 'Article modifié avec succès' : 'Article ajouté avec succès');
+                            ref.invalidate(articlesProvider);
+                          } catch (e) {
+                            ref.read(notifProvider.notifier).displayNotif('Erreur : $e');
+                          } finally {
+                            if (mounted) {
+                              setState(() => _isSubmitting = false);
+                            }
+                          }
+                        },
+                  child: _isSubmitting
+                      ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                      : Text(widget.editedArticle != null ? 'Modifier' : 'Ajouter'),
                 ),
               ],
             ),

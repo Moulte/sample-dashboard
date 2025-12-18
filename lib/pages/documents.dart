@@ -1,6 +1,3 @@
-// ======================
-// Page : Liste des documents
-// ======================
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -23,6 +20,7 @@ class _DocumentRowsView extends StatelessWidget {
         child: Text('Aucune ligne', style: TextStyle(fontStyle: FontStyle.italic)),
       );
     }
+
     return Column(
       children: rows.map((r) {
         return ListTile(
@@ -30,8 +28,6 @@ class _DocumentRowsView extends StatelessWidget {
           dense: true,
           title: Text(r.article != null ? '${r.article!.codeArticle} – ${r.article!.libArticle}' : 'Ligne sans article'),
           subtitle: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.start,
             children: [
               Text('Qté : ${r.qte ?? 0} • '),
               Text('Remise : ${r.remisePrct ?? 0} %'),
@@ -91,62 +87,82 @@ class DocumentListPage extends ConsumerWidget {
                   itemBuilder: (context, index) {
                     final d = filtered[index];
                     final isExpanded = expandedDocs.contains(d.numeroDocument);
+                    final deleting = ref.watch(deletingDocumentProvider).contains(d.numeroDocument);
 
                     return Card(
                       elevation: 2,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       child: Column(
                         children: [
-                          // 🧾 En-tête document
                           ListTile(
                             onTap: () {
                               final notifier = ref.read(expandedDocumentsProvider.notifier);
                               final set = {...notifier.state};
 
-                              if (isExpanded) {
-                                set.remove(d.numeroDocument);
-                              } else {
-                                set.add(d.numeroDocument);
-                              }
+                              isExpanded ? set.remove(d.numeroDocument) : set.add(d.numeroDocument);
 
                               notifier.state = set;
                             },
+                            leading: Icon(isExpanded ? Icons.expand_less : Icons.expand_more),
                             title: Text(
-                              '${d.docType.toUpperCase()} N° ${d.numeroDocument} – '
-                              'Client : ${d.client.numeroClient} ${d.client.nomLivraison}',
+                              '${d.docType.toUpperCase()} '
+                              'N° ${d.numeroDocument} – '
+                              'Client : ${d.client.numeroClient} '
+                              '${d.client.nomLivraison}',
                               style: const TextStyle(fontWeight: FontWeight.bold),
                             ),
                             subtitle: Text(
                               'Date : ${d.docDate} • '
                               'Total TTC : ${d.totalTTC.toStringAsFixed(2)} €',
                             ),
-                            leading: Icon(isExpanded ? Icons.expand_less : Icons.expand_more),
                             trailing: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
+                                IconButton(
+                                  icon: deleting
+                                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                                      : const Icon(Icons.download),
+                                  onPressed: deleting
+                                      ? null
+                                      : () async {
+                                          final config = ref.read(configProvider).whenOrNull(data: (d) => d);
+                                          if (config == null || !config.checkConfigurationComplete()) {
+                                            ref.read(notifProvider.notifier).displayNotif('Configuration incomplète');
+                                            return;
+                                          }
+                                          ref.read(connexionProvider).downloadDocument(config, d);
+                                        },
+                                ),
                                 IconButton(
                                   icon: const Icon(Icons.edit),
                                   color: Colors.blue,
                                   onPressed: () => context.go('/documents/edit', extra: d),
                                 ),
                                 IconButton(
-                                  icon: const Icon(Icons.delete),
+                                  icon: deleting
+                                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                                      : const Icon(Icons.delete),
                                   color: Colors.red,
-                                  onPressed: () async {
-                                    try {
-                                      await ref.read(connexionProvider).deleteDocument(d);
-                                      ref.read(notifProvider.notifier).displayNotif('Document supprimé');
-                                      ref.invalidate(documentsProvider);
-                                    } catch (e) {
-                                      ref.read(notifProvider.notifier).displayNotif('Erreur : $e');
-                                    }
-                                  },
+                                  onPressed: deleting
+                                      ? null
+                                      : () async {
+                                          final notifier = ref.read(deletingDocumentProvider.notifier);
+                                          notifier.state = {...notifier.state, d.numeroDocument};
+
+                                          try {
+                                            await ref.read(connexionProvider).deleteDocument(d);
+                                            ref.read(notifProvider.notifier).displayNotif('Document supprimé');
+                                            ref.invalidate(documentsProvider);
+                                          } catch (e) {
+                                            ref.read(notifProvider.notifier).displayNotif('Erreur : $e');
+                                          } finally {
+                                            notifier.state = notifier.state..remove(d.numeroDocument);
+                                          }
+                                        },
                                 ),
                               ],
                             ),
                           ),
-
-                          // 📄 Lignes du document
                           AnimatedCrossFade(
                             firstChild: const SizedBox.shrink(),
                             secondChild: _DocumentRowsView(d.lignes),
@@ -169,9 +185,6 @@ class DocumentListPage extends ConsumerWidget {
   }
 }
 
-// ======================
-// Page : Ajout d'un document
-// ======================
 class AddDocumentPage extends ConsumerStatefulWidget {
   final Document? editedDocument;
 
@@ -184,11 +197,13 @@ class AddDocumentPage extends ConsumerStatefulWidget {
 class _AddDocumentPageState extends ConsumerState<AddDocumentPage> {
   final _formKey = GlobalKey<FormState>();
 
-  String? _docType = "facture";
-  String? _docDate = DateFormat('yyyy-MM-dd').format(DateTime.now());
-  String? _numDoc = "";
+  String _docType = 'facture';
+  String _docDate = DateFormat('yyyy-MM-dd').format(DateTime.now());
+  String _numDoc = '';
   DBClient? _client;
   final List<DocumentRow> lignes = [];
+
+  bool _isSubmitting = false;
 
   @override
   void initState() {
@@ -217,7 +232,7 @@ class _AddDocumentPageState extends ConsumerState<AddDocumentPage> {
 
   void addItem() {
     setState(() {
-      lignes.add(DocumentRow(numeroDocument: _numDoc!, numeroLigne: (lignes.length + 1).toString(), qte: 1, remisePrct: 0.0));
+      lignes.add(DocumentRow(numeroDocument: _numDoc, numeroLigne: (lignes.length + 1).toString(), qte: 1, remisePrct: 0.0));
     });
   }
 
@@ -280,17 +295,16 @@ class _AddDocumentPageState extends ConsumerState<AddDocumentPage> {
 
   @override
   Widget build(BuildContext context) {
-    final articles = ref
-        .watch(articlesProvider)
-        .when(data: (articles) => articles, error: (e, _) => <Article>[], loading: () => <Article>[]);
-    final clients = ref.watch(clientsProvider).when(data: (clients) => clients, error: (e, _) => <DBClient>[], loading: () => <DBClient>[]);
-    if (clients.isEmpty || articles.isEmpty) {
+    final articles = ref.watch(articlesProvider).when(data: (d) => d, error: (_, _) => <Article>[], loading: () => <Article>[]);
+    final clients = ref.watch(clientsProvider).when(data: (d) => d, error: (_, _) => [], loading: () => []);
+
+    if (articles.isEmpty || clients.isEmpty) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
-    ref.watch(documentsProvider).whenData((documents) {
-      if (widget.editedDocument == null) {
-        // Auto-increment du numéro document
-        final maxNum = documents.map((c) => int.tryParse(c.numeroDocument) ?? 0).fold<int>(0, (prev, curr) => curr > prev ? curr : prev);
+
+    ref.watch(documentsProvider).whenData((docs) {
+      if (widget.editedDocument == null && _numDoc.isEmpty) {
+        final maxNum = docs.map((d) => int.tryParse(d.numeroDocument) ?? 0).fold<int>(0, (a, b) => b > a ? b : a);
         _numDoc = (maxNum + 1).toString();
       }
     });
@@ -306,7 +320,6 @@ class _AddDocumentPageState extends ConsumerState<AddDocumentPage> {
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: ListView(
-                shrinkWrap: true,
                 children: [
                   TextFormField(
                     readOnly: widget.editedDocument != null,
@@ -339,14 +352,14 @@ class _AddDocumentPageState extends ConsumerState<AddDocumentPage> {
                       DropdownMenuItem(value: 'facture', child: Text('Facture')),
                     ],
                     onChanged: (val) {
-                      setState(() => _docType = val);
+                      setState(() => _docType = val!);
                     },
                   ),
                   DropdownButtonFormField<String>(
                     initialValue: _client?.numeroClient,
                     decoration: const InputDecoration(labelText: 'Client'),
                     items: clients
-                        .map((c) => DropdownMenuItem(value: c.numeroClient, child: Text('${c.numeroClient} - ${c.nomLivraison}')))
+                        .map((c) => DropdownMenuItem<String>(value: c.numeroClient, child: Text('${c.numeroClient} - ${c.nomLivraison}')))
                         .toList(),
                     onChanged: (val) {
                       setState(() => _client = clients.firstWhere((c) => c.numeroClient == val));
@@ -370,34 +383,38 @@ class _AddDocumentPageState extends ConsumerState<AddDocumentPage> {
                   ),
 
                   const SizedBox(height: 20),
-                  ElevatedButton.icon(
-                    icon: Icon(Icons.check_circle_outline, color: Colors.green),
-                    style: ButtonStyle(elevation: WidgetStateProperty.all(4)),
-                    onPressed: () async {
-                      final doc = Document(
-                        docType: _docType!,
-                        docDate: _docDate!,
-                        numeroDocument: _numDoc!,
-                        client: _client!,
-                        lignes: lignes,
-                      );
-                      try {
-                        await ref.read(connexionProvider).postDocument(doc);
-                        ref
-                            .read(notifProvider.notifier)
-                            .displayNotif(widget.editedDocument != null ? 'Document modifié avec succès' : 'Document ajouté avec succès');
-                        ref.invalidate(documentsProvider);
-                      } catch (e) {
-                        ref
-                            .read(notifProvider.notifier)
-                            .displayNotif(
-                              widget.editedDocument != null
-                                  ? 'Erreur lors de la modification du document : $e'
-                                  : 'Erreur lors de l\'ajout du document : $e',
+
+                  ElevatedButton(
+                    onPressed: _isSubmitting
+                        ? null
+                        : () async {
+                            setState(() => _isSubmitting = true);
+
+                            final doc = Document(
+                              docType: _docType,
+                              docDate: _docDate,
+                              numeroDocument: _numDoc,
+                              client: _client!,
+                              lignes: lignes,
                             );
-                      }
-                    },
-                    label: Text(widget.editedDocument != null ? 'Modifier' : 'Ajouter'),
+
+                            try {
+                              await ref.read(connexionProvider).postDocument(doc);
+                              ref
+                                  .read(notifProvider.notifier)
+                                  .displayNotif(widget.editedDocument != null ? 'Document modifié' : 'Document ajouté');
+                              ref.invalidate(documentsProvider);
+                            } catch (e) {
+                              ref.read(notifProvider.notifier).displayNotif('Erreur : $e');
+                            } finally {
+                              if (mounted) {
+                                setState(() => _isSubmitting = false);
+                              }
+                            }
+                          },
+                    child: _isSubmitting
+                        ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                        : Text(widget.editedDocument != null ? 'Modifier' : 'Ajouter'),
                   ),
                 ],
               ),

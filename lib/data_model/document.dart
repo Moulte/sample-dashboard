@@ -51,6 +51,7 @@ class Document {
 
   double get totalTTC => lignes.fold(0.0, (sum, item) => sum + item.totalLigneTTC);
   double get totalHT => lignes.fold(0.0, (sum, item) => sum + item.totalLigneHT);
+  double get totalTVA => totalTTC - totalHT;
 
   Map<String, dynamic> toJson() => {
     'docType': docType,
@@ -58,5 +59,48 @@ class Document {
     'numeroDocument': numeroDocument,
     'client': client.toJson(),
     'lignes': lignes.map((a) => a.toJson()).toList(),
+  };
+  Map<String, dynamic> createPdfData() => {
+    "numero_document": numeroDocument,
+    "client": {
+      "adresse_livraison": {
+        "nom": client.nomLivraison,
+        "telephone": client.telephoneLivraison,
+        "adresse": client.rueLivraison,
+        "ville": client.villeLivraison,
+        "code_postal": client.codePostalLivraison,
+        "mail": client.contactLivraison,
+      },
+      "adresse_facturation": {
+        "nom": client.nomFacturation,
+        "telephone": client.telephoneFacturation,
+        "adresse": client.rueFacturation,
+        "ville": client.villeFacturation,
+        "code_postal": client.codePostalFacturation,
+        "mail": client.contactFacturation,
+      },
+      "nom_client": client.nomLivraison,
+      "numero_client": client.numeroClient,
+    },
+    "doc_date": docDate,
+    "lignes_document": 
+    
+    
+      lignes.map((ligne) => {
+        "numero_ligne": ligne.numeroLigne,
+        "commentaire_ligne": ligne.commentaireLigne,
+        "quantite": ligne.qte,
+        "remise_prct": ligne.remisePrct,
+        "article": {
+          "code_article": ligne.article?.codeArticle,
+          "lib_article": ligne.article?.libArticle,
+          "prix_unitaire_HT": ligne.article?.prixUnitaireHT,
+          "tva_prct": ligne.article?.tvaPrct,
+        },
+      }).toList(),
+    "total_HT": totalHT,
+    "total_TVA": totalTVA,
+    "total_TTC": totalTTC,
+    "type_doc": docType,
   };
 }

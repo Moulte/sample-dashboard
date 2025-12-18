@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart';
 import 'package:micro_entreprise_web/auth/auth.dart';
 import 'package:micro_entreprise_web/data_model/article.dart';
+import 'package:micro_entreprise_web/data_model/config.dart';
 import 'package:micro_entreprise_web/data_model/document.dart';
 import 'package:micro_entreprise_web/data_model/db_client.dart';
 
@@ -184,5 +185,32 @@ class API {
       throw Exception('Failed to delete document: ${response.body}');
     }
     return response.statusCode == 200;
+  }
+
+  Future<AppConfiguration> fetchConfig() async {
+    final response = await get(Uri.parse('$baseUrl/cmulteau/gestion/config'));
+    final data = json.decode(response.body);
+    return AppConfiguration.fromJson(data);
+  }
+
+  Future<bool> postConfig(AppConfiguration config) async {
+    final response = await post(Uri.parse('$baseUrl/cmulteau/gestion/config'), body: json.encode(config.toJson()));
+    if (response.statusCode != 200) {
+      throw Exception('Failed to post config: ${response.body}');
+    }
+    return response.statusCode == 200;
+  }
+
+  Future<Uint8List> downloadDocument(AppConfiguration config, Document d) {
+    final pdfData = d.createPdfData();
+    final pdfJson = json.encode({'config': config.toJson(), 'document': pdfData});
+    final downloadUrl = Uri.parse('$baseUrl/cmulteau/gestion/generate_pdf');
+
+    return post(downloadUrl, body: pdfJson).then((response) {
+      if (response.statusCode != 200) {
+        throw Exception('Failed to generate PDF: ${response.body}');
+      }
+      return response.bodyBytes;
+    });
   }
 }
