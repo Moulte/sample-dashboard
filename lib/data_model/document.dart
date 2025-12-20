@@ -97,6 +97,7 @@ class Document {
           "prix_unitaire_HT": ligne.article?.prixUnitaireHT,
           "tva_prct": ligne.article?.tvaPrct,
         },
+        "total_ligne_HT": ligne.totalLigneHT,
       }).toList(),
     "total_HT": totalHT,
     "total_TVA": totalTVA,
