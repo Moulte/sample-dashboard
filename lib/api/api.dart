@@ -110,10 +110,12 @@ class API {
       // Création du document s'il n'existe pas
       if (!documentsMap.containsKey(numeroDocument)) {
         documentsMap[numeroDocument] = Document(
-          docType: row['docType'],
+          docType: DocumentType.values.byName(row['docType']),
           docDate: row['docDate'],
           numeroDocument: numeroDocument,
           client: DBClient.fromJson(row),
+          amoutPaid: (row['amoutPaid'] as num?)?.toDouble(),
+          lastPaimentDate: row['lastPaimentDate'],
           lignes: [],
         );
       }

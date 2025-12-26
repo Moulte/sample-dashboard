@@ -1,6 +1,8 @@
 import 'package:micro_entreprise_web/data_model/article.dart';
 import 'package:micro_entreprise_web/data_model/db_client.dart';
 
+enum DocumentType { devis, facture }
+
 class DocumentRow {
   String numeroDocument;
   final String numeroLigne;
@@ -33,31 +35,36 @@ class DocumentRow {
 }
 
 class Document {
-  final String docType;
+  final DocumentType docType;
   final String docDate;
   final String numeroDocument;
   final DBClient client;
-
+  final double? amoutPaid;
+  final String? lastPaimentDate;
   final List<DocumentRow> lignes;
 
-  Document({required this.docType, required this.docDate, required this.numeroDocument, required this.client, required this.lignes});
-  factory Document.fromJson(Map<String, dynamic> json) => Document(
-    docType: json['docType'],
-    docDate: json['docDate'],
-    numeroDocument: json['numeroDocument'],
-    client: DBClient.fromJson(json),
-    lignes: (json['lignes'] as List).map((x) => DocumentRow.fromJson(x)).toList(),
-  );
+  Document({
+    required this.docType,
+    required this.docDate,
+    required this.numeroDocument,
+    required this.client,
+    required this.lignes,
+    required this.amoutPaid,
+    required this.lastPaimentDate,
+  });
 
   double get totalTTC => lignes.fold(0.0, (sum, item) => sum + item.totalLigneTTC);
   double get totalHT => lignes.fold(0.0, (sum, item) => sum + item.totalLigneHT);
   double get totalTVA => totalTTC - totalHT;
+  bool? get isPaid => docType != DocumentType.facture ? null : amoutPaid == totalTTC;
 
   Map<String, dynamic> toJson() => {
-    'docType': docType,
+    'docType': docType.name,
     'docDate': docDate,
     'numeroDocument': numeroDocument,
     'client': client.toJson(),
+    'amoutPaid': amoutPaid,
+    'lastPaimentDate': lastPaimentDate,
     'lignes': lignes.map((a) => a.toJson()).toList(),
   };
   Map<String, dynamic> createPdfData() => {
@@ -83,25 +90,26 @@ class Document {
       "numero_client": client.numeroClient,
     },
     "doc_date": docDate,
-    "lignes_document": 
-    
-    
-      lignes.map((ligne) => {
-        "numero_ligne": ligne.numeroLigne,
-        "commentaire_ligne": ligne.commentaireLigne,
-        "quantite": ligne.qte,
-        "remise_prct": ligne.remisePrct,
-        "article": {
-          "code_article": ligne.article?.codeArticle,
-          "lib_article": ligne.article?.libArticle,
-          "prix_unitaire_HT": ligne.article?.prixUnitaireHT,
-          "tva_prct": ligne.article?.tvaPrct,
-        },
-        "total_ligne_HT": ligne.totalLigneHT,
-      }).toList(),
+    "lignes_document": lignes
+        .map(
+          (ligne) => {
+            "numero_ligne": ligne.numeroLigne,
+            "commentaire_ligne": ligne.commentaireLigne,
+            "quantite": ligne.qte,
+            "remise_prct": ligne.remisePrct,
+            "article": {
+              "code_article": ligne.article?.codeArticle,
+              "lib_article": ligne.article?.libArticle,
+              "prix_unitaire_HT": ligne.article?.prixUnitaireHT,
+              "tva_prct": ligne.article?.tvaPrct,
+            },
+            "total_ligne_HT": ligne.totalLigneHT,
+          },
+        )
+        .toList(),
     "total_HT": totalHT,
     "total_TVA": totalTVA,
     "total_TTC": totalTTC,
-    "type_doc": docType,
+    "type_doc": docType.name,
   };
 }

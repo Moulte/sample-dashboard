@@ -107,9 +107,22 @@ class DocumentListPage extends ConsumerWidget {
 
                               notifier.state = set;
                             },
-                            leading: Icon(isExpanded ? Icons.expand_less : Icons.expand_more),
+                            leading: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(isExpanded ? Icons.expand_less : Icons.expand_more),
+                                if (d.isPaid != null)
+                                  Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(d.isPaid! ? Icons.check_circle : Icons.warning, color: d.isPaid! ? Colors.green : Colors.orange),
+                                      Text(d.lastPaimentDate != null&&d.lastPaimentDate!='' ? DateFormat('dd/MM/yyyy').format(DateTime.parse(d.lastPaimentDate!)) : '', style: const TextStyle(fontSize: 8),),
+                                    ],
+                                  ),
+                              ],
+                            ),
                             title: Text(
-                              '${d.docType.toUpperCase()} '
+                              '${d.docType.name.toUpperCase()} '
                               'N° ${d.numeroDocument} – '
                               'Client : ${d.client.numeroClient} '
                               '${d.client.nomLivraison}',
@@ -218,9 +231,11 @@ class AddDocumentPage extends ConsumerStatefulWidget {
 class _AddDocumentPageState extends ConsumerState<AddDocumentPage> {
   final _formKey = GlobalKey<FormState>();
 
-  String _docType = 'facture';
+  DocumentType _docType = DocumentType.facture;
   String _docDate = DateFormat('yyyy-MM-dd').format(DateTime.now());
+  String? _lastPaimentDate;
   String _numDoc = '';
+  double _amoutPaid = 0.0;
   DBClient? _client;
   final List<DocumentRow> lignes = [];
 
@@ -235,6 +250,8 @@ class _AddDocumentPageState extends ConsumerState<AddDocumentPage> {
       _docDate = doc.docDate;
       _numDoc = doc.numeroDocument;
       _client = doc.client;
+      _lastPaimentDate = doc.lastPaimentDate;
+      _amoutPaid = doc.amoutPaid ?? 0.0;
       lignes.addAll(doc.lignes);
     }
   }
@@ -365,13 +382,12 @@ class _AddDocumentPageState extends ConsumerState<AddDocumentPage> {
                       });
                     },
                   ),
-                  DropdownButtonFormField<String>(
+                  DropdownButtonFormField<DocumentType>(
                     initialValue: _docType,
                     decoration: const InputDecoration(labelText: 'Type de document'),
-                    items: const [
-                      DropdownMenuItem(value: 'devis', child: Text('Devis')),
-                      DropdownMenuItem(value: 'facture', child: Text('Facture')),
-                    ],
+                    items: DocumentType.values.map((dt) {
+                      return DropdownMenuItem<DocumentType>(value: dt, child: Text(dt.name));
+                    }).toList(),
                     onChanged: (val) {
                       setState(() => _docType = val!);
                     },
@@ -386,11 +402,29 @@ class _AddDocumentPageState extends ConsumerState<AddDocumentPage> {
                       setState(() => _client = clients.firstWhere((c) => c.numeroClient == val));
                     },
                   ),
+                  TextFormField(
+                    initialValue: _amoutPaid.toString(),
+                    decoration: const InputDecoration(labelText: 'Montant déjà payé'),
+                    onChanged: (value) {
+                      setState(() {
+                        _amoutPaid = double.tryParse(value) ?? 0.0;
+                      });
+                    },
+                  ),
+                  TextFormField(
+                    initialValue: _lastPaimentDate,
+                    decoration: const InputDecoration(labelText: 'Date du dernier paiement'),
+                    onChanged: (value) {
+                      setState(() {
+                        _lastPaimentDate = value;
+                      });
+                    },
+                  ),
 
                   const SizedBox(height: 16),
 
                   SizedBox(
-                    height: 400,
+                    height: 300,
                     child: ListView.builder(
                       padding: const EdgeInsets.all(16),
                       itemCount: lignes.length + 1, // +1 pour le bouton "Ajouter"
@@ -417,6 +451,8 @@ class _AddDocumentPageState extends ConsumerState<AddDocumentPage> {
                               numeroDocument: _numDoc,
                               client: _client!,
                               lignes: lignes,
+                              amoutPaid: _amoutPaid,
+                              lastPaimentDate: _lastPaimentDate,
                             );
 
                             try {
