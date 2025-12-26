@@ -114,7 +114,7 @@ class API {
           docDate: row['docDate'],
           numeroDocument: numeroDocument,
           client: DBClient.fromJson(row),
-          amoutPaid: (row['amoutPaid'] as num?)?.toDouble(),
+          amountPaid: (row['amountPaid'] as num?)?.toDouble(),
           lastPaimentDate: row['lastPaimentDate'],
           lignes: [],
         );

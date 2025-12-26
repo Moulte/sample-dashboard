@@ -39,7 +39,7 @@ class Document {
   final String docDate;
   final String numeroDocument;
   final DBClient client;
-  final double? amoutPaid;
+  final double? amountPaid;
   final String? lastPaimentDate;
   final List<DocumentRow> lignes;
 
@@ -49,21 +49,21 @@ class Document {
     required this.numeroDocument,
     required this.client,
     required this.lignes,
-    required this.amoutPaid,
+    required this.amountPaid,
     required this.lastPaimentDate,
   });
 
   double get totalTTC => lignes.fold(0.0, (sum, item) => sum + item.totalLigneTTC);
   double get totalHT => lignes.fold(0.0, (sum, item) => sum + item.totalLigneHT);
   double get totalTVA => totalTTC - totalHT;
-  bool? get isPaid => docType != DocumentType.facture ? null : amoutPaid == totalTTC;
+  bool? get isPaid => docType != DocumentType.facture ? null : amountPaid == totalTTC;
 
   Map<String, dynamic> toJson() => {
     'docType': docType.name,
     'docDate': docDate,
     'numeroDocument': numeroDocument,
     'client': client.toJson(),
-    'amoutPaid': amoutPaid,
+    'amountPaid': amountPaid,
     'lastPaimentDate': lastPaimentDate,
     'lignes': lignes.map((a) => a.toJson()).toList(),
   };

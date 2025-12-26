@@ -235,7 +235,7 @@ class _AddDocumentPageState extends ConsumerState<AddDocumentPage> {
   String _docDate = DateFormat('yyyy-MM-dd').format(DateTime.now());
   String? _lastPaimentDate;
   String _numDoc = '';
-  double _amoutPaid = 0.0;
+  double _amountPaid = 0.0;
   DBClient? _client;
   final List<DocumentRow> lignes = [];
 
@@ -251,7 +251,7 @@ class _AddDocumentPageState extends ConsumerState<AddDocumentPage> {
       _numDoc = doc.numeroDocument;
       _client = doc.client;
       _lastPaimentDate = doc.lastPaimentDate;
-      _amoutPaid = doc.amoutPaid ?? 0.0;
+      _amountPaid = doc.amountPaid ?? 0.0;
       lignes.addAll(doc.lignes);
     }
   }
@@ -403,11 +403,11 @@ class _AddDocumentPageState extends ConsumerState<AddDocumentPage> {
                     },
                   ),
                   TextFormField(
-                    initialValue: _amoutPaid.toString(),
+                    initialValue: _amountPaid.toString(),
                     decoration: const InputDecoration(labelText: 'Montant déjà payé'),
                     onChanged: (value) {
                       setState(() {
-                        _amoutPaid = double.tryParse(value) ?? 0.0;
+                        _amountPaid = double.tryParse(value) ?? 0.0;
                       });
                     },
                   ),
@@ -451,7 +451,7 @@ class _AddDocumentPageState extends ConsumerState<AddDocumentPage> {
                               numeroDocument: _numDoc,
                               client: _client!,
                               lignes: lignes,
-                              amoutPaid: _amoutPaid,
+                              amountPaid: _amountPaid,
                               lastPaimentDate: _lastPaimentDate,
                             );
 
